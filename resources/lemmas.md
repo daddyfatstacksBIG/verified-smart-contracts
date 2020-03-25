@@ -1,5 +1,4 @@
-Verification Lemmas
-===================
+# Verification Lemmas
 
 ```k
 requires "evm.k"
@@ -14,12 +13,17 @@ module LEMMAS
 ### Memory Abstraction
 
 We present an abstraction for the EVM memory to allow the word-level reasoning.
-The word is considered as the smallest unit of values in the surface language level (thus in the contract developers’ mind as well), but the EVM memory is byte-addressable.
-Our abstraction helps to fill the gap and make the reasoning easier.
+The word is considered as the smallest unit of values in the surface language
+level (thus in the contract developers’ mind as well), but the EVM memory is
+byte-addressable. Our abstraction helps to fill the gap and make the reasoning
+easier.
 
-Specifically, we introduce uninterpreted function abstractions and refinements for the word-level reasoning.
+Specifically, we introduce uninterpreted function abstractions and refinements
+for the word-level reasoning.
 
-The term `nthbyteof(v, i, n)` represents the i-th byte of the two's complement representation of v in n bytes (i=0 being the MSB), with high-order bytes discarded when v does not fit in n bytes.
+The term `nthbyteof(v, i, n)` represents the i-th byte of the two's complement
+representation of v in n bytes (i=0 being the MSB), with high-order bytes
+discarded when v does not fit in n bytes.
 
 ```k
     syntax Int ::= nthbyteof ( Int , Int , Int ) [function, smtlib(smt_nthbyteof), proj]
@@ -28,11 +32,15 @@ The term `nthbyteof(v, i, n)` represents the i-th byte of the two's complement r
     rule nthbyteof(V, I, N) =>           V modInt 256             when N ==Int (I +Int 1) [concrete]
 ```
 
-However, we'd like to keep it uninterpreted, if the arguments are symbolic, to avoid the non-linear arithmetic reasoning, which even the state-of-the-art theorem provers cannot handle very well.
-Instead, we introduce lemmas over the uninterpreted functional terms.
+However, we'd like to keep it uninterpreted, if the arguments are symbolic, to
+avoid the non-linear arithmetic reasoning, which even the state-of-the-art
+theorem provers cannot handle very well. Instead, we introduce lemmas over the
+uninterpreted functional terms.
 
-The following lemmas are used for symbolic reasoning about `MLOAD` and `MSTORE` instructions.
-They capture the essential mechanisms used by the two instructions: splitting a word into the byte-array and merging it back to the word.
+The following lemmas are used for symbolic reasoning about `MLOAD` and `MSTORE`
+instructions. They capture the essential mechanisms used by the two
+instructions: splitting a word into the byte-array and merging it back to the
+word.
 
 ```k
     rule #asWord( nthbyteof(V,  0, 32)
@@ -75,15 +83,24 @@ They capture the essential mechanisms used by the two instructions: splitting a 
     rule nthbyteof(N, 0, 1) => N
 ```
 
-Another type of byte-array manipulating operation is used to extract the function signature from the call data.
-The function signature is located in the first four bytes of the call data, but there is no atomic EVM instruction that can load only the four bytes, thus some kind of byte-twiddling operations are necessary.
+Another type of byte-array manipulating operation is used to extract the
+function signature from the call data. The function signature is located in the
+first four bytes of the call data, but there is no atomic EVM instruction that
+can load only the four bytes, thus some kind of byte-twiddling operations are
+necessary.
 
-The extraction mechanism varies by language compilers.
-For example, in Vyper, the first 32 bytes of the call data are loaded into the memory at the starting location 28 (i.e., in the memory range of 28 to 59), and the memory range of 0 to 31, which consists of 28 zero bytes and the four signature bytes, is loaded into the stack.
-In Solidity, however, the first 32 bytes of the call data are loaded into the stack, and the loaded word (i.e., a 256-bit integer) is divided by `2^(28*8)` (i.e., right-shifted by 28 bytes), followed by masked by 0xffffffff (i.e., 4 bytes of bit 1’s).
+The extraction mechanism varies by language compilers. For example, in Vyper,
+the first 32 bytes of the call data are loaded into the memory at the starting
+location 28 (i.e., in the memory range of 28 to 59), and the memory range of 0
+to 31, which consists of 28 zero bytes and the four signature bytes, is loaded
+into the stack. In Solidity, however, the first 32 bytes of the call data are
+loaded into the stack, and the loaded word (i.e., a 256-bit integer) is divided
+by `2^(28*8)` (i.e., right-shifted by 28 bytes), followed by masked by
+0xffffffff (i.e., 4 bytes of bit 1’s).
 
-The following lemmas essentially capture the signature extraction mechanisms.
-It reduces the reasoning efforts of the underlying theorem prover, factoring out the essence of the byte-twiddling operations.
+The following lemmas essentially capture the signature extraction mechanisms. It
+reduces the reasoning efforts of the underlying theorem prover, factoring out
+the essence of the byte-twiddling operations.
 
 ```k
     syntax Bool ::= #isRegularWordStack ( WordStack ) [function]
@@ -148,10 +165,12 @@ It reduces the reasoning efforts of the underlying theorem prover, factoring out
 
 ### Integer Expression Simplification Rules
 
-We introduce simplification rules that capture arithmetic properties, which reduce the given terms into smaller ones.
-These rules help to improve the performance of the underlying theorem prover’s symbolic reasoning.
+We introduce simplification rules that capture arithmetic properties, which
+reduce the given terms into smaller ones. These rules help to improve the
+performance of the underlying theorem prover’s symbolic reasoning.
 
-Below are universal simplification rules that are free to be used in any context.
+Below are universal simplification rules that are free to be used in any
+context.
 
 ```k
     rule N +Int 0 => N
@@ -174,9 +193,9 @@ Below are universal simplification rules that are free to be used in any context
     rule N &Int N => N
 ```
 
-The following simplification rules are local, meant to be used in specific contexts.
-The rules are applied only when the side-conditions are met.
-These rules are specific to reasoning about EVM programs.
+The following simplification rules are local, meant to be used in specific
+contexts. The rules are applied only when the side-conditions are met. These
+rules are specific to reasoning about EVM programs.
 
 ```k
     //orienting symbolic term to be first, converting -Int to +Int for concrete values.
@@ -211,10 +230,12 @@ These rules are specific to reasoning about EVM programs.
     rule (#if C #then B1 #else B2 #fi) +Int A => #if C #then (B1 +Int A) #else (B2 +Int A) #fi
 ```
 
-Operator direction normalization rules. Required to reduce the number of forms of inequalities that can be matched by
-general lemmas. We chose to keep `<Int` and `<=Int` because those operators are used in all range lemmas and in
-`#range` macros. Operators `>Int` and `>=Int` are still allowed anywhere except rules LHS.
-In all other places they will be matched and rewritten by rules below.
+Operator direction normalization rules. Required to reduce the number of forms
+of inequalities that can be matched by general lemmas. We chose to keep `<Int`
+and `<=Int` because those operators are used in all range lemmas and in `#range`
+macros. Operators `>Int` and `>=Int` are still allowed anywhere except rules
+LHS. In all other places they will be matched and rewritten by rules below.
+
 ```k
     rule X >Int Y => Y <Int X
     rule X >=Int Y => Y <=Int X
@@ -225,8 +246,9 @@ In all other places they will be matched and rewritten by rules below.
 
 ### Boolean
 
-In EVM, no boolean value exist but instead, 1 and 0 are used to represent true and false respectively.
-`bool2Word` is used to convert from booleans to integers, and lemmas are provided here for it.
+In EVM, no boolean value exist but instead, 1 and 0 are used to represent true
+and false respectively. `bool2Word` is used to convert from booleans to
+integers, and lemmas are provided here for it.
 
 ```k
     rule bool2Word(A) |Int bool2Word(B) => bool2Word(A  orBool B)
@@ -258,15 +280,20 @@ Some lemmas over the comparison operators are also provided.
 ```
 
 ### Range Matching Lemmas
-Many rules both in KEVM and in this file contain range-related side conditions, like
-`requires 0 <=Int V andBool V <Int pow256`. These expressions have to be reduced to `true` in order to side condition to match.
-This can generally happen in 3 ways.
-- If expression is concrete, then regular rules from KEVM will apply and eventually reduce it to true or false.
-- Otherwise, side condition can be matched by an inequality in the term constraint (path condition).
-If side condition cannot be matched exactly, Z3 will be invoked and can still deduct it indirectly from the entire constraint,
-through boolean and arithmetic reasoning.
-- Otherwise, we can extend the semantics with specific "lemma" rules for symbolic expression that can be proved true
-from their concrete semantics.
+
+Many rules both in KEVM and in this file contain range-related side conditions,
+like `requires 0 <=Int V andBool V <Int pow256`. These expressions have to be
+reduced to `true` in order to side condition to match. This can generally happen
+in 3 ways.
+
+-   If expression is concrete, then regular rules from KEVM will apply and
+    eventually reduce it to true or false.
+-   Otherwise, side condition can be matched by an inequality in the term
+    constraint (path condition). If side condition cannot be matched exactly, Z3
+    will be invoked and can still deduct it indirectly from the entire
+    constraint, through boolean and arithmetic reasoning.
+-   Otherwise, we can extend the semantics with specific "lemma" rules for
+    symbolic expression that can be proved true from their concrete semantics.
 
 Below are the most common such range matching lemmas.
 
@@ -300,14 +327,14 @@ Below are the most common such range matching lemmas.
       requires N <Int pow256
 ```
 
-Because lemmas are applied as plain K rewrite rule, they have to match exactly, without any deductive reasoning.
-For example the lemma `rule A < 100 => true` won't match the side condition `requires A <= 99` or
-`requires 100 > A`.
-To avoid such mismatching situations we need additional expression normalization rules.
-First rule below converts `maxUInt256` to `pow256`.
-It allows side conditions that use `maxUInt256` or `#range` macros
-match the range lemmas above. Note that lemmas above all use `<Int pow256` for the upper range.
-The other rules are similar.
+Because lemmas are applied as plain K rewrite rule, they have to match exactly,
+without any deductive reasoning. For example the lemma `rule A < 100 => true`
+won't match the side condition `requires A <= 99` or `requires 100 > A`. To
+avoid such mismatching situations we need additional expression normalization
+rules. First rule below converts `maxUInt256` to `pow256`. It allows side
+conditions that use `maxUInt256` or `#range` macros match the range lemmas
+above. Note that lemmas above all use `<Int pow256` for the upper range. The
+other rules are similar.
 
 ```k
     rule X <=Int maxUInt256 => X <Int pow256
@@ -317,10 +344,12 @@ The other rules are similar.
 
 Range transformation, required for example for chop reduction rules below.
 
-WARNING: Denis: I suspect these 3 lemmas were all necessary since I introduced #symEcrec construct which
-pretty much caused most query build operations to fail and thus rendered z3 unusable.
-Now since Z3 translation was fixed in K they must not be needd.
-They cause a major increase in the number of Z3 queries and slowdown.
+WARNING: Denis: I suspect these 3 lemmas were all necessary since I introduced
+#symEcrec construct which pretty much caused most query build operations to fail
+and thus rendered z3 unusable. Now since Z3 translation was fixed in K they must
+not be needd. They cause a major increase in the number of Z3 queries and
+slowdown.
+
 ```k
     /*rule X <Int pow256 => true
       requires X <Int 256

@@ -1,5 +1,4 @@
-Verification Lemmas
-===================
+# Verification Lemmas
 
 ```k
 requires "evm.k"
@@ -14,12 +13,17 @@ module LEMMAS
 ### Memory Abstraction
 
 We present an abstraction for the EVM memory to allow the word-level reasoning.
-The word is considered as the smallest unit of values in the surface language level (thus in the contract developers’ mind as well), but the EVM memory is byte-addressable.
-Our abstraction helps to fill the gap and make the reasoning easier.
+The word is considered as the smallest unit of values in the surface language
+level (thus in the contract developers’ mind as well), but the EVM memory is
+byte-addressable. Our abstraction helps to fill the gap and make the reasoning
+easier.
 
-Specifically, we introduce uninterpreted function abstractions and refinements for the word-level reasoning.
+Specifically, we introduce uninterpreted function abstractions and refinements
+for the word-level reasoning.
 
-The term `nthbyteof(v, i, n)` represents the i-th byte of the two's complement representation of v in n bytes (i=0 being the MSB), with high-order bytes discarded when v does not fit in n bytes.
+The term `nthbyteof(v, i, n)` represents the i-th byte of the two's complement
+representation of v in n bytes (i=0 being the MSB), with high-order bytes
+discarded when v does not fit in n bytes.
 
 ```k
     syntax Int ::= nthbyteof ( Int , Int , Int ) [function, smtlib(smt_nthbyteof), proj]
@@ -28,11 +32,15 @@ The term `nthbyteof(v, i, n)` represents the i-th byte of the two's complement r
     rule nthbyteof(V, I, N) =>           V modInt 256             when N ==Int (I +Int 1) [concrete]
 ```
 
-However, we'd like to keep it uninterpreted, if the arguments are symbolic, to avoid the non-linear arithmetic reasoning, which even the state-of-the-art theorem provers cannot handle very well.
-Instead, we introduce lemmas over the uninterpreted functional terms.
+However, we'd like to keep it uninterpreted, if the arguments are symbolic, to
+avoid the non-linear arithmetic reasoning, which even the state-of-the-art
+theorem provers cannot handle very well. Instead, we introduce lemmas over the
+uninterpreted functional terms.
 
-The following lemmas are used for symbolic reasoning about `MLOAD` and `MSTORE` instructions.
-They capture the essential mechanisms used by the two instructions: splitting a word into the byte-array and merging it back to the word.
+The following lemmas are used for symbolic reasoning about `MLOAD` and `MSTORE`
+instructions. They capture the essential mechanisms used by the two
+instructions: splitting a word into the byte-array and merging it back to the
+word.
 
 ```k
     rule 0 <=Int nthbyteof(V, I, N)          => true
@@ -74,15 +82,24 @@ They capture the essential mechanisms used by the two instructions: splitting a 
       requires 0 <=Int V andBool V <Int pow256
 ```
 
-Another type of byte-array manipulating operation is used to extract the function signature from the call data.
-The function signature is located in the first four bytes of the call data, but there is no atomic EVM instruction that can load only the four bytes, thus some kind of byte-twiddling operations are necessary.
+Another type of byte-array manipulating operation is used to extract the
+function signature from the call data. The function signature is located in the
+first four bytes of the call data, but there is no atomic EVM instruction that
+can load only the four bytes, thus some kind of byte-twiddling operations are
+necessary.
 
-The extraction mechanism varies by language compilers.
-For example, in Vyper, the first 32 bytes of the call data are loaded into the memory at the starting location 28 (i.e., in the memory range of 28 to 59), and the memory range of 0 to 31, which consists of 28 zero bytes and the four signature bytes, is loaded into the stack.
-In Solidity, however, the first 32 bytes of the call data are loaded into the stack, and the loaded word (i.e., a 256-bit integer) is divided by `2^(28*8)` (i.e., right-shifted by 28 bytes), followed by masked by 0xffffffff (i.e., 4 bytes of bit 1’s).
+The extraction mechanism varies by language compilers. For example, in Vyper,
+the first 32 bytes of the call data are loaded into the memory at the starting
+location 28 (i.e., in the memory range of 28 to 59), and the memory range of 0
+to 31, which consists of 28 zero bytes and the four signature bytes, is loaded
+into the stack. In Solidity, however, the first 32 bytes of the call data are
+loaded into the stack, and the loaded word (i.e., a 256-bit integer) is divided
+by `2^(28*8)` (i.e., right-shifted by 28 bytes), followed by masked by
+0xffffffff (i.e., 4 bytes of bit 1’s).
 
-The following lemmas essentially capture the signature extraction mechanisms.
-It reduces the reasoning efforts of the underlying theorem prover, factoring out the essence of the byte-twiddling operations.
+The following lemmas essentially capture the signature extraction mechanisms. It
+reduces the reasoning efforts of the underlying theorem prover, factoring out
+the essence of the byte-twiddling operations.
 
 ```k
     rule #padToWidth(32, #asByteStack(V)) => #asByteStackInWidth(V, 32)
@@ -155,10 +172,12 @@ It reduces the reasoning efforts of the underlying theorem prover, factoring out
 
 ### Integer Expression Simplification Rules
 
-We introduce simplification rules that capture arithmetic properties, which reduce the given terms into smaller ones.
-These rules help to improve the performance of the underlying theorem prover’s symbolic reasoning.
+We introduce simplification rules that capture arithmetic properties, which
+reduce the given terms into smaller ones. These rules help to improve the
+performance of the underlying theorem prover’s symbolic reasoning.
 
-Below are universal simplification rules that are free to be used in any context.
+Below are universal simplification rules that are free to be used in any
+context.
 
 ```k
     rule 0 +Int N => N
@@ -187,9 +206,9 @@ Below are universal simplification rules that are free to be used in any context
     rule N &Int N => N
 ```
 
-The following simplification rules are local, meant to be used in specific contexts.
-The rules are applied only when the side-conditions are met.
-These rules are specific to reasoning about EVM programs.
+The following simplification rules are local, meant to be used in specific
+contexts. The rules are applied only when the side-conditions are met. These
+rules are specific to reasoning about EVM programs.
 
 ```k
     rule (I1 +Int I2) +Int I3 => I1 +Int (I2 +Int I3) when #isConcrete(I2) andBool #isConcrete(I3)
@@ -214,8 +233,9 @@ These rules are specific to reasoning about EVM programs.
 
 ### Boolean
 
-In EVM, no boolean value exist but instead, 1 and 0 are used to represent true and false respectively.
-`bool2Word` is used to convert from booleans to integers, and lemmas are provided here for it.
+In EVM, no boolean value exist but instead, 1 and 0 are used to represent true
+and false respectively. `bool2Word` is used to convert from booleans to
+integers, and lemmas are provided here for it.
 
 ```k
     rule bool2Word(A) |Int bool2Word(B) => bool2Word(A  orBool B)
@@ -227,10 +247,10 @@ In EVM, no boolean value exist but instead, 1 and 0 are used to represent true a
     rule bool2Word(A) =/=K 1 => notBool(A)
 
     rule chop(bool2Word(B)) => bool2Word(B)
-    
-    rule #asWord(0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 
-                   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : nthbyteof(bool2Word( E ), I, N) : .WordStack) 
-         => bool2Word( E ) 
+
+    rule #asWord(0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0
+                   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : nthbyteof(bool2Word( E ), I, N) : .WordStack)
+         => bool2Word( E )
 
     rule 1 &Int bool2Word(B) => bool2Word(B)
 ```

@@ -1,70 +1,111 @@
-*2018-01-16*
+_2018-01-16_
 
 # Formal Verification of HackerGold (HKG) ERC20 Token Contract
 
-We present a formal verification of [HackerGold (HKG) ERC20][src] token contract.
+We present a formal verification of [HackerGold (HKG) ERC20][src] token
+contract.
 
-The HackerGold (HKG) token is an ERC20 token written in Solidity, which became well-known when a [serious security vulnerability] was discovered that even survived a security audit performed by Zeppelin.
-Specifically, the bug was due to a [typographical error] in the source code, using `=+` instead of `+=` for updating a receiver’s balance during a transfer, which would allow an attacker to reset an account balance. This security issue was resolved by deploying a new, fixed contract and reissuing the tokens.
+The HackerGold (HKG) token is an ERC20 token written in Solidity, which became
+well-known when a [serious security vulnerability] was discovered that even
+survived a security audit performed by Zeppelin. Specifically, the bug was due
+to a [typographical error] in the source code, using `=+` instead of `+=` for
+updating a receiver’s balance during a transfer, which would allow an attacker
+to reset an account balance. This security issue was resolved by deploying a
+new, fixed contract and reissuing the tokens.
 
-We found that the HKG token implementation does **not** conform to the [ERC20 standard], and deviates from the [ERC20-K] (and thus [ERC20-EVM]) specification as follows:
+We found that the HKG token implementation does **not** conform to the [ERC20
+standard], and deviates from the [ERC20-K] (and thus [ERC20-EVM]) specification
+as follows:
 
-* *No `totalSupply` function*: No `totalSupply` function is provided in the HKG token, which is **not** compliant to the [ERC20 standard].
+-   _No `totalSupply` function_: No `totalSupply` function is provided in the
+    HKG token, which is **not** compliant to the [ERC20 standard].
 
-* *Returning `false` in failure*: It returns `false` instead of throwing an exception in case of failure for both `transfer` and `transferFrom`. It does not violate the standard, as throwing an exception is recommended but not mandatory according to the [ERC20 standard]:
+-   _Returning `false` in failure_: It returns `false` instead of throwing an
+    exception in case of failure for both `transfer` and `transferFrom`. It does
+    not violate the standard, as throwing an exception is recommended but not
+    mandatory according to the [ERC20 standard]:
 
-> "The function SHOULD throw if the from account balance does not have enough tokens to spend."
+> "The function SHOULD throw if the from account balance does not have enough
+> tokens to spend."
 
-* *Rejecting transfers of 0 value*: It does not allow transferring 0 value (for both `transfer` and `transferFrom`), returning `false` immediately without logging any event. It is **not** compliant to the standard, as the standard explicitly states that:
+-   _Rejecting transfers of 0 value_: It does not allow transferring 0 value
+    (for both `transfer` and `transferFrom`), returning `false` immediately
+    without logging any event. It is **not** compliant to the standard, as the
+    standard explicitly states that:
 
-> "transfers of 0 values MUST be treated as normal transfers and fire the Transfer event."
+> "transfers of 0 values MUST be treated as normal transfers and fire the
+> Transfer event."
 
-   This is a potential security vulnerability for any API clients assuming the ERC20-compliant behavior.
+This is a potential security vulnerability for any API clients assuming the
+ERC20-compliant behavior.
 
-* *No overflow protection*: It does not check arithmetic overflow, resulting in the receiver's balance wrapping around the 256-bit unsigned integer's maximum value in case of the overflow (for both `transfer` and `transferFrom`). It does not violate the standard, as the standard does not specify any requirement regarding it. However, it is questionable and potentially vulnerable, since it will result in loss of the funds in case of the overflow as the receiver's balance wraps around to a lower-than-expected value. We ask any API clients to be careful, having additional detection and protection mechanism for the arithmetic overflow, when using the HKG token.
+-   _No overflow protection_: It does not check arithmetic overflow, resulting
+    in the receiver's balance wrapping around the 256-bit unsigned integer's
+    maximum value in case of the overflow (for both `transfer` and
+    `transferFrom`). It does not violate the standard, as the standard does not
+    specify any requirement regarding it. However, it is questionable and
+    potentially vulnerable, since it will result in loss of the funds in case of
+    the overflow as the receiver's balance wraps around to a lower-than-expected
+    value. We ask any API clients to be careful, having additional detection and
+    protection mechanism for the arithmetic overflow, when using the HKG token.
 
 ## Target Smart Contract
 
-The target contract of our formal verification has the following Solidity source code, taken from the Github repository https://github.com/ether-camp/virtual-accelerator at commit [`42258200`][version]:
+The target contract of our formal verification has the following Solidity source
+code, taken from the Github repository
+https://github.com/ether-camp/virtual-accelerator at commit
+[`42258200`][version]:
 
-* [StandardToken.sol][src]
+-   [StandardToken.sol][src]
 
-We formally verified the full functional correctness of the following ERC20 functions:
+We formally verified the full functional correctness of the following ERC20
+functions:
 
-* `totalSupply`: we proved the absence of the function
-* [`balanceOf`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L105)
-* [`allowance`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L147)
-* [`approve`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L122)
-* [`transfer`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L38)
-* [`transferFrom`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L69)
+-   `totalSupply`: we proved the absence of the function
+-   [`balanceOf`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L105)
+-   [`allowance`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L147)
+-   [`approve`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L122)
+-   [`transfer`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L38)
+-   [`transferFrom`](https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol#L69)
 
 ## Verification Artifacts
 
 ### Solidity Source Code and Compiled EVM Bytecode
 
-We took the [source code][src], inlined the [`TokenInterface`] contract, and compiled it to the EVM bytecode using Remix Solidity IDE (version `soljson-v0.4.19+commit.c4cbbb05`).
+We took the [source code][src], inlined the [`TokenInterface`] contract, and
+compiled it to the EVM bytecode using Remix Solidity IDE (version
+`soljson-v0.4.19+commit.c4cbbb05`).
 
 The inlined source code of the contract is the following:
 
-* [StandardToken.inlined.sol](StandardToken.inlined.sol)
+-   [StandardToken.inlined.sol](StandardToken.inlined.sol)
 
-The EVM (runtime) bytecode generated by the Remix Solidity compiler is the following:
+The EVM (runtime) bytecode generated by the Remix Solidity compiler is the
+following:
 
-* [StandardToken.inlined.bytes](StandardToken.inlined.bytes)
+-   [StandardToken.inlined.bytes](StandardToken.inlined.bytes)
 
 The Remix IDE-generated Gist link:
 
-* StandardToken.inlined.gist: https://gist.github.com/anonymous/a57e87e7f735a656f166976641575fa1
+-   StandardToken.inlined.gist:
+    https://gist.github.com/anonymous/a57e87e7f735a656f166976641575fa1
 
 The (annotated) EVM assembly disassembled from the bytecode is the following:
 
-* [StandardToken.inlined.evm](StandardToken.inlined.evm)
+-   [StandardToken.inlined.evm](StandardToken.inlined.evm)
 
 ### Mechanized Specifications and Proofs
 
-Due to its deviation from ERC20-K, we could not verify the HKG token against the original ERC20-EVM specification. In order to show that it is "correct" w.r.t. ERC20-K (thus ERC20-EVM) modulo the deviation, we modified the specification to capture the deviation and successfully verified it against the modified ERC20-EVM specification. Below are the changes made to the original ERC20-EVM specification:
+Due to its deviation from ERC20-K, we could not verify the HKG token against the
+original ERC20-EVM specification. In order to show that it is "correct" w.r.t.
+ERC20-K (thus ERC20-EVM) modulo the deviation, we modified the specification to
+capture the deviation and successfully verified it against the modified
+ERC20-EVM specification. Below are the changes made to the original ERC20-EVM
+specification:
 
-* To capture the absence of the `totalSupply` function, we wrote a new specification for `totalSupply` that throws an exception immediately when being called, as follows:
+-   To capture the absence of the `totalSupply` function, we wrote a new
+    specification for `totalSupply` that throws an exception immediately when
+    being called, as follows:
 
     ```
     [totalSupply]
@@ -78,9 +119,12 @@ Due to its deviation from ERC20-K, we could not verify the HKG token against the
     requires:
     ```
 
-    Note that the local memory could end up with some contents due to the function signature extraction process, for which some gas will be consumed. Other than that, nothing (`log`, `refund`, and `storage`) will be updated.
+    Note that the local memory could end up with some contents due to the
+    function signature extraction process, for which some gas will be consumed.
+    Other than that, nothing (`log`, `refund`, and `storage`) will be updated.
 
-* To capture the false return value, we changed the `k` and `localMem` parameters of the `transfer-failure` section, from:
+-   To capture the false return value, we changed the `k` and `localMem`
+    parameters of the `transfer-failure` section, from:
 
     ```
     k: #execute => #halt
@@ -94,9 +138,12 @@ Due to its deviation from ERC20-K, we could not verify the HKG token against the
     localMem: .Map => .Map[ RET_ADDR := #buf(32, 0) ] _:Map
     ```
 
-    The modified parameter values specify that it returns `false` (denoted by 0) instead of throwing an exception. We changed the `transferFrom-failure` section similarly as the above.
+    The modified parameter values specify that it returns `false` (denoted by 0)
+    instead of throwing an exception. We changed the `transferFrom-failure`
+    section similarly as the above.
 
-* To capture the rejection of transferring 0 value, we added the following additional `requires` conditions, one for the success cases:
+-   To capture the rejection of transferring 0 value, we added the following
+    additional `requires` conditions, one for the success cases:
 
     ```
     andBool VALUE >Int 0
@@ -108,9 +155,11 @@ Due to its deviation from ERC20-K, we could not verify the HKG token against the
     orBool VALUE <=Int 0
     ```
 
-    Note that the above complement, combined with the value range condition, implies `VALUE ==Int 0`.
+    Note that the above complement, combined with the value range condition,
+    implies `VALUE ==Int 0`.
 
-* To capture the arithmetic overflow behavior, we changed the storage parameter values, from:
+-   To capture the arithmetic overflow behavior, we changed the storage
+    parameter values, from:
 
     ```
     #hashedLocation({COMPILER}, {_BALANCES}, TO_ID) |-> (BAL_TO => BAL_TO +Int VALUE)
@@ -122,9 +171,13 @@ Due to its deviation from ERC20-K, we could not verify the HKG token against the
     #hashedLocation({COMPILER}, {_BALANCES}, TO_ID) |-> (BAL_TO => BAL_TO +Word VALUE)
     ```
 
-    Note the difference between `+Word` and `+Int`. The `+Word` operation wraps around `2**256 − 1`, the maximum unsigned 256-bit integer value, while the `+Int` operation is the mathematical integer addition (i.e., the arbitrary precision integer addition).
+    Note the difference between `+Word` and `+Int`. The `+Word` operation wraps
+    around `2**256 − 1`, the maximum unsigned 256-bit integer value, while the
+    `+Int` operation is the mathematical integer addition (i.e., the arbitrary
+    precision integer addition).
 
-    Also, we dropped the `requires` conditions for the overflow, the one for the success cases:
+    Also, we dropped the `requires` conditions for the overflow, the one for the
+    success cases:
 
     ```
     andBool BAL_TO +Int VALUE <Int (2 ^Int 256)
@@ -136,9 +189,12 @@ Due to its deviation from ERC20-K, we could not verify the HKG token against the
     orBool BAL_TO +Int VALUE >=Int (2 ^Int 256)
     ```
 
-The full changes made in ERC20-EVM are shown in [here](spec-diff.patch). The specifications of other functions except `transfer` and `transferFrom` are the same as the original ERC20-EVM.
+The full changes made in ERC20-EVM are shown in [here](spec-diff.patch). The
+specifications of other functions except `transfer` and `transferFrom` are the
+same as the original ERC20-EVM.
 
-We took the modified [ERC20-EVM] specification and instantiated it with the [program-specific parameters] shown below.
+We took the modified [ERC20-EVM] specification and instantiated it with the
+[program-specific parameters] shown below.
 
 ```
 [pgm]
@@ -152,38 +208,50 @@ gasCap: 100000
 
 The resulting specification is the following:
 
-* [hkg-erc20-spec.ini](hkg-erc20-spec.ini)
+-   [hkg-erc20-spec.ini](hkg-erc20-spec.ini)
 
-The specification is written in [eDSL], a domain-specific language for EVM specifications, which must be known in order to thoroughly understand our EVM-level specification.  Refer to [resources] for background on our technology.  The above file provides the [eDSL] specification template parameters.
-The full K reachability logic specification is automatically derived by instantiating a specification template with these template parameters.
+The specification is written in [eDSL], a domain-specific language for EVM
+specifications, which must be known in order to thoroughly understand our
+EVM-level specification. Refer to [resources] for background on our technology.
+The above file provides the [eDSL] specification template parameters. The full K
+reachability logic specification is automatically derived by instantiating a
+specification template with these template parameters.
 
-Run the following command in the root directory of this repository to generate the full specification under the directory `specs/hkg-erc20`:
+Run the following command in the root directory of this repository to generate
+the full specification under the directory `specs/hkg-erc20`:
 
 ```
 $ make hkg-erc20
 ```
 
-Run the EVM verifier to prove that the specification is satisfied by (the compiled EVM bytecode of) the target functions.
-See these [instructions] for more details of running the verifier.
+Run the EVM verifier to prove that the specification is satisfied by (the
+compiled EVM bytecode of) the target functions. See these [instructions] for
+more details of running the verifier.
 
 ## [Resources](/README.md#resources)
 
 ## [Disclaimer](/README.md#disclaimer)
 
-
-[KEVM]: <https://github.com/kframework/evm-semantics>
-[K-framework]: <http://www.kframework.org>
-[reachability logic theorem prover]: <http://fsl.cs.illinois.edu/index.php/Semantics-Based_Program_Verifiers_for_All_Languages>
-[resources]: </README.md#resources>
-[eDSL]: </resources/edsl.md>
-[program-specific parameters]: </resources/edsl-spec.md#program-specific-parameters>
-[version]: <https://github.com/ether-camp/virtual-accelerator/tree/42258200952f2796df93023887f9fa6c1ecdf61a>
-[src]: <https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol>
-[`TokenInterface`]: <https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/TokenInterface.sol>
-[serious security vulnerability]: <https://www.ethnews.com/ethercamps-hkg-token-has-a-bug-and-needs-to-be-reissued>
-[typographical error]: <https://github.com/ether-camp/virtual-accelerator/issues/8>
-[ERC20]: <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md>
-[ERC20 standard]: <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md>
-[ERC20-K]: <https://github.com/runtimeverification/erc20-semantics>
-[ERC20-EVM]: </resources/erc20-evm.md>
-[instructions]: </resources/instructions.md>
+[kevm]: https://github.com/kframework/evm-semantics
+[k-framework]: http://www.kframework.org
+[reachability logic theorem prover]:
+    http://fsl.cs.illinois.edu/index.php/Semantics-Based_Program_Verifiers_for_All_Languages
+[resources]: /README.md#resources
+[edsl]: /resources/edsl.md
+[program-specific parameters]:
+    /resources/edsl-spec.md#program-specific-parameters
+[version]:
+    https://github.com/ether-camp/virtual-accelerator/tree/42258200952f2796df93023887f9fa6c1ecdf61a
+[src]:
+    https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/StandardToken.sol
+[`tokeninterface`]:
+    https://github.com/ether-camp/virtual-accelerator/blob/42258200952f2796df93023887f9fa6c1ecdf61a/contracts/TokenInterface.sol
+[serious security vulnerability]:
+    https://www.ethnews.com/ethercamps-hkg-token-has-a-bug-and-needs-to-be-reissued
+[typographical error]:
+    https://github.com/ether-camp/virtual-accelerator/issues/8
+[erc20]: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
+[erc20 standard]: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
+[erc20-k]: https://github.com/runtimeverification/erc20-semantics
+[erc20-evm]: /resources/erc20-evm.md
+[instructions]: /resources/instructions.md
