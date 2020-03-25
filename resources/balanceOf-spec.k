@@ -198,4 +198,3 @@ andBool 0 <=Int VALUE andBool VALUE <Int (2 ^Int 256)andBool OWNER ==Int 0
 
 
 endmodule
-

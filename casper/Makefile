@@ -111,4 +111,3 @@ $(SPECS_DIR)/$(SPEC_GROUP)/collective_reward-success-zero-1-2-spec.k: $(TMPLS) $
 $(SPECS_DIR)/$(SPEC_GROUP)/collective_reward-success-zero-2-spec.k: $(TMPLS) $(SPEC_INI) $(LEMMAS)
 	@echo >&2 "==  gen-spec: $@"
 	python3 $(RESOURCES)/gen-spec.py $(TMPLS) $(SPEC_INI) collective_reward-success-zero-2 esf-success deposit_exists-success-true deposit_exists-success-false-1 deposit_exists-success-false-2 collective_reward-success-zero-2 > $@
-

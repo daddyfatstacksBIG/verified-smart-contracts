@@ -65,7 +65,7 @@ pipeline {
     stage('Dependencies') {
       steps { ansiColor('xterm') {
           sh 'make -C resources deps'
-          script { 
+          script {
             if (env.VSC_USE_KSERVER.toBoolean()) {
               sh '''
                 echo 'Starting kserver...'
