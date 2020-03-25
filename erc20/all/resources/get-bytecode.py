@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-
 # Prerequisites: pip install pyetherchain
 #
 # usage: python3 get-bytecode.py <address>
-
 import sys
+
 from pyetherchain.pyetherchain import EtherChain
 
 
